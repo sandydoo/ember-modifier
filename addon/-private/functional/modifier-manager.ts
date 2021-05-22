@@ -1,6 +1,8 @@
 import { capabilities } from '@ember/modifier';
+import { gte } from 'ember-compatibility-helpers';
 import { FunctionalModifier } from './modifier';
 import { ModifierArgs } from '../interfaces';
+import { consumeArgs } from '../consume-args';
 
 interface Factory {
   class: FunctionalModifier;
@@ -28,7 +30,45 @@ function setup(
   MODIFIER_TEARDOWNS.set(modifier, teardown);
 }
 
-class FunctionalModifierManager {
+class FunctionalModifierManager322 {
+  capabilities = capabilities('3.22');
+
+  createModifier(Modifier: FunctionalModifier): FunctionalModifier {
+    // This looks superfluous, but this is creating a new instance
+    // of a function -- this is important so that each instance of the
+    // created modifier can have its own state which is stored in
+    // the MODIFIER_ELEMENTS and MODIFIER_TEARDOWNS WeakMaps
+    return (...args) => Modifier(...args);
+  }
+
+  installModifier(
+    modifier: FunctionalModifier,
+    element: Element,
+    args: ModifierArgs
+  ): void {
+    MODIFIER_ELEMENTS.set(modifier, element);
+
+    consumeArgs(args);
+
+    setup(modifier, element, args);
+  }
+
+  updateModifier(modifier: FunctionalModifier, args: ModifierArgs): void {
+    const element = MODIFIER_ELEMENTS.get(modifier);
+
+    teardown(modifier);
+
+    consumeArgs(args);
+
+    setup(modifier, element, args);
+  }
+
+  destroyModifier(modifier: FunctionalModifier): void {
+    teardown(modifier);
+  }
+}
+
+class FunctionalModifierManager313 {
   capabilities = capabilities('3.13');
 
   createModifier(factory: Factory): FunctionalModifier {
@@ -59,5 +99,9 @@ class FunctionalModifierManager {
     teardown(modifier);
   }
 }
+
+const FunctionalModifierManager = gte('3.22.0')
+  ? FunctionalModifierManager322
+  : FunctionalModifierManager313;
 
 export default new FunctionalModifierManager();
